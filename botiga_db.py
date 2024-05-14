@@ -1,3 +1,4 @@
+from datetime import datetime
 import json
 import mysql.connector
 
@@ -8,15 +9,15 @@ class botiga_db:
         try:
             config = json.load(open("config.json"))
             self.conn = mysql.connector.connect(
-                host = config["host"],
-                port = config["port"],
-                user = config["user"],
-                password = config["password"],
-                database = config["database"],
+                host=config["host"],
+                port=config["port"],
+                user=config["user"],
+                password=config["password"],
+                database=config["database"],
             )
         except Exception as e:
-            return{"status": -1, "message":f"Error de conexion:{e}"}
-    
+            return {"status": -1, "message": f"Error de conexion:{e}"}
+
     def __del__(self):  # Tanca la connexió quan s'esborra la instància
         if self.conn:
             self.conn.close()
@@ -46,19 +47,60 @@ class botiga_db:
     def create_producte(self, producte):
         try:
             cur = self.conn.cursor()
-            cur.execute(f"INSERT INTO product (name, description, company, price, units, subcategory_id) VALUES ('{producte['name']}', '{producte['description']}', '{producte['company']}', {producte['price']}, {producte['units']}, {producte['subcategory_id']});")
+            cur.execute(
+                f"INSERT INTO product (name, description, company, price, units, subcategory_id) VALUES ('{producte['name']}', '{producte['description']}', '{producte['company']}', {producte['price']}, {producte['units']}, {producte['subcategory_id']});"
+            )
             self.conn.commit()
             result = json.dumps({"status": "S'ha afegit correctement"})
             return result
         except Exception as e:
             return {"status": -1, "message": f"Error llegint el producte: {e}"}
 
-    def create_productes(productes):
-        pass
+    def create_productes(self, productes):
+        results = []
+        for producte in productes:
+            result = self.create_producte(producte)
+            results.append(result)
+        return results
 
-    def update_producte(id, producte):
-        pass
+    def delete_producte(self, product_id: int):
+        try:
+            cur = self.conn.cursor()
+            cur.execute(f"DELETE FROM product WHERE product_id = {product_id}")
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error eliminando el producto: {e}")
+            return False
 
-    def delete_producte(id):
-        pass
-    
+    def update_producte(self, id: int, name: str):
+        try:
+            cur = self.conn.cursor()
+            cur.execute(
+                """
+                UPDATE product
+                SET name = %s
+                WHERE product_id = %s
+                """,
+                (name, id),
+            )
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error actualizando el nombre del producto: {e}")
+            return False
+        
+    def read_productes_details(self):
+        try:
+            cur = self.conn.cursor(dictionary=True)
+            cur.execute("""
+                SELECT c.name AS category_name, sc.name AS subcategory_name, p.name AS product_name, p.company AS product_brand, p.price AS product_price
+                FROM product p
+                INNER JOIN subcategory sc ON p.subcategory_id = sc.subcategory_id
+                INNER JOIN category c ON sc.category_id = c.category_id;
+            """)
+            data = cur.fetchall()
+            return data
+        except Exception as e:
+            print(f"Error leyendo los productos: {e}")
+            return []
