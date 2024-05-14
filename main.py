@@ -1,5 +1,5 @@
 import datetime
-from typing import List, Union
+from typing import List
 from fastapi import FastAPI
 from pydantic import BaseModel
 from botiga_db import botiga_db
@@ -77,7 +77,12 @@ def read_productes_with_details():
     except Exception as e:
         return {"status": -1, "message": f"Error obteniendo los productos: {e}"}
 
-
-
-#p = {"name": "elpro", "description": "ducto", "company": "micompa", "price": 123.45, "units": 1, "subcategory_id": 1}
-#print(db_handler.create_producte(p))
+# Aquest endpoint permet inserir tots els productes d'un fitxer csv a la base de dades
+@app.get("/loadProducts/{filename}")
+def load_products(filename:str):
+    try:
+        db_handler.load_products(filename)
+        return {"status": "Productes carregats correctament"}
+    except Exception as e:
+        return {"status": -1, "message": f"Error afegint el producte: {e}"}
+    

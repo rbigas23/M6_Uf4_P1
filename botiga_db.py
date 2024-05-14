@@ -1,11 +1,12 @@
-from datetime import datetime
+import csv
+import datetime
 import json
 import mysql.connector
 
 
 class botiga_db:
 
-    def __init__(self): # El metodo inicializa una conexion a la base de datos utilizando los parametros de configuracion proporcionados en un archivo JSON
+    def __init__(self):  # Inicialitza una conexió amb la base de dades utilizant els paràmetres de configuració proporcionats al arxiu JSON corresponent
         try:
             config = json.load(open("config.json"))
             self.conn = mysql.connector.connect(
@@ -18,11 +19,32 @@ class botiga_db:
         except Exception as e:
             return {"status": -1, "message": f"Error de conexion:{e}"}
 
-    def __del__(self):  # El metodo cierra la conexion cuando borra la instacia
+    def __del__(self):  # Tanca la connexió quan s'esborra la instància
         if self.conn:
             self.conn.close()
 
-    def read_producte(self, id): # El metodo consulta la base de datos para obtener la informacion de un producto especiofico identificado por su ID
+    # MÈTODES CRUD
+
+    def create_producte(self, product_data):  # Crea un producte a la taula amb la informació especificada i retorna un missatge indicant si s'ha cerat correctament
+        try:
+            cur = self.conn.cursor()
+            cur.execute(
+                f"INSERT INTO product (name, description, company, price, units, subcategory_id) VALUES ('{product_data['name']}', '{product_data['description']}', '{product_data['company']}', {product_data['price']}, {product_data['units']}, {product_data['subcategory_id']});"
+            )
+            self.conn.commit()
+            result = json.dumps({"status": "S'ha afegit correctement"})
+            return result
+        except Exception as e:
+            return {"status": -1, "message": f"Error llegint el producte: {e}"}
+
+    def create_productes(self, productes):  # El método permite crear varios productos a la vez en la base de datos, por cada producto se llama al método "create_producte"
+        results = []
+        for producte in productes:
+            result = self.create_producte(producte)
+            results.append(result)
+        return results
+
+    def read_producte(self, id):  # Retorna la informació d'un producte amb una id específica o el missatge d'error corresponent
         try:
             cur = self.conn.cursor()
             cur.execute(f"SELECT * FROM product WHERE product_id = {id};")
@@ -33,7 +55,7 @@ class botiga_db:
         except Exception as e:
             return {"status": -1, "message": f"Error llegint el producte: {e}"}
 
-    def read_productes(self): # El metodo consulta la base de datos para obtener la informacion de todos los productos
+    def read_productes(self):  # Retorna la informació de tots els productes de la taula o el missatge d'error corresponent
         try:
             cur = self.conn.cursor()
             cur.execute(f"SELECT * FROM product;")
@@ -43,37 +65,23 @@ class botiga_db:
             return result
         except Exception as e:
             return {"status": -1, "message": f"Error llegint el producte: {e}"}
-
-    def create_producte(self, producte): # El metodo inserta un nuevo producto en la base de datos utilizando los datos proporcionados
+        
+    def read_productes_details(self):  # Retorna la informació de tots els productes de la taula, incloent els noms de la categoria i la subcategoria
         try:
-            cur = self.conn.cursor()
-            cur.execute(
-                f"INSERT INTO product (name, description, company, price, units, subcategory_id) VALUES ('{producte['name']}', '{producte['description']}', '{producte['company']}', {producte['price']}, {producte['units']}, {producte['subcategory_id']});"
-            )
-            self.conn.commit()
-            result = json.dumps({"status": "S'ha afegit correctement"})
-            return result
+            cur = self.conn.cursor(dictionary=True)
+            cur.execute("""
+                SELECT c.name AS category_name, sc.name AS subcategory_name, p.name AS product_name, p.company AS product_brand, p.price AS product_price
+                FROM product p
+                INNER JOIN subcategory sc ON p.subcategory_id = sc.subcategory_id
+                INNER JOIN category c ON sc.category_id = c.category_id;
+            """)
+            data = cur.fetchall()
+            return data
         except Exception as e:
-            return {"status": -1, "message": f"Error llegint el producte: {e}"}
+            print(f"Error leyendo los productos: {e}")
+            return []
 
-    def create_productes(self, productes): # El metodo permite crear varios productos a la vez en la base de datos, por cada producto se llama al metodo "create_producte"
-        results = []
-        for producte in productes:
-            result = self.create_producte(producte)
-            results.append(result)
-        return results
-
-    def delete_producte(self, product_id: int): # El metodo actualiza el nombre de un producto en la base de datos segun el ID proporcionado
-        try:
-            cur = self.conn.cursor()
-            cur.execute(f"DELETE FROM product WHERE product_id = {product_id}")
-            self.conn.commit()
-            return True
-        except Exception as e:
-            print(f"Error eliminando el producto: {e}")
-            return False
-
-    def update_producte(self, product_id: int, name: str): # El metodo hace una consulta que selecciona detalles específicos de los productos, incluyendo el nombre de la categoria, el nombre de la subcategoria, el nombre del producto, la marca del producto y el precio, utilizamos los INNER JOIN para combinar las tablas product, subcategory y category segun las primary key y foreing key que estan la base de datos
+    def update_producte(self, product_id: int, name: str): # El método hace una consulta que selecciona detalles específicos de los productos, incluyendo el nombre de la categoria, el nombre de la subcategoria, el nombre del producto, la marca del producto y el precio, utilizamos los INNER JOIN para combinar las tablas product, subcategory y category segun las primary key y foreing key que estan la base de datos
         try:
             cur = self.conn.cursor()
             cur.execute(
@@ -90,17 +98,77 @@ class botiga_db:
             print(f"Error actualizando el nombre del producto: {e}")
             return False
         
-    def read_productes_details(self):
+    def delete_producte(self, product_id: int): # El método actualiza el nombre de un producto en la base de datos segun el ID proporcionado
         try:
-            cur = self.conn.cursor(dictionary=True)
-            cur.execute("""
-                SELECT c.name AS category_name, sc.name AS subcategory_name, p.name AS product_name, p.company AS product_brand, p.price AS product_price
-                FROM product p
-                INNER JOIN subcategory sc ON p.subcategory_id = sc.subcategory_id
-                INNER JOIN category c ON sc.category_id = c.category_id;
-            """)
-            data = cur.fetchall()
-            return data
+            cur = self.conn.cursor()
+            cur.execute(f"DELETE FROM product WHERE product_id = {product_id}")
+            self.conn.commit()
+            return True
         except Exception as e:
-            print(f"Error leyendo los productos: {e}")
-            return []
+            print(f"Error eliminando el producto: {e}")
+            return False
+
+    # MÈTODES PER A CARREGAR PRODUCTES AMB CSV
+
+    def load_products(self, filename):  # Carrega tots els productes continguts en el fitxer csv especificat
+        with open(f"{filename}.csv") as csv_file:
+            products = csv.DictReader(csv_file)  # Fem servir la llibreria csv per llegir el contingut
+
+            for product in products:  # Per cada producte es processen els diferents grups de dades i s'insereixen/actualitzen els registres corresponents
+
+                category_dict = {'category_id':product['id_categoria'], 'name':product['nom_categoria']}
+                self.process_category(category_dict)
+
+                subcategory_dict = {'subcategory_id':product['id_subcategoria'], 'name':product['nom_subcategoria'], 'category_id':product['id_categoria']}
+                self.process_subcategory(subcategory_dict)
+
+                product_dict = {'product_id':product['id_producto'], 'name':product['nom_producto'], 'description':product['descripcion_producto'], 'company':product['companyia'], 'price':product['precio'], 'units':product['unidades'], 'subcategory_id':product['id_subcategoria']}
+                self.process_product(product_dict)
+
+    def exist(self, table, id):  # Comproba si existeix un registre amb una id determinada a la taula especificada
+        cur = self.conn.cursor()
+        cur.execute(f"SELECT 1 FROM {table} WHERE {table}_id = {id};")
+        data = cur.fetchone()
+        return data is not None
+    
+    def create_item(self, table, data):  # Insereix les dades d'un ítem (categoria, subcategoria o producte) a la taula especificada
+        cur = self.conn.cursor()
+        columns = ", ".join(data.keys())
+        values = ", ".join("\"" + value + "\"" if isinstance(value, str) else value for value in data.values())
+        cur.execute(f"INSERT INTO {table} ({columns}) VALUES ({values})")
+        self.conn.commit()
+
+    def update_item (self, table, name, id):  # Actualitza el nom i la id d'un ítem (categoria, subcategoria o producte) a la taula especificada
+        cur = self.conn.cursor()
+        cur.execute(f"UPDATE {table} SET name = '{name}', updated_at = '{datetime.datetime.now()}' WHERE {table}_id = {id};")
+        self.conn.commit()
+
+    """Els tres métodes següents s'encarrguen de processar les dades d'una categoria, una subcategoria o un producte
+    (actualitza o insereix les dades segons si l'element ja existeix o no)"""
+
+    def process_category(self, category_dict):  
+        id = category_dict['category_id']
+        name = category_dict['name']
+        if self.exist("category", id):
+            self.update_item("category", name, id)
+        else:
+            category_dict.pop('category_id') 
+            self.create_item("category", category_dict)
+
+    def process_subcategory(self, subcategory_dict):
+        id = subcategory_dict['subcategory_id']
+        name = subcategory_dict['name']
+        if self.exist("subcategory", id):
+            self.update_item("subcategory", name, id)
+        else:
+            subcategory_dict.pop('subcategory_id') 
+            self.create_item("subcategory", subcategory_dict)
+    
+    def process_product(self, product_dict):
+        id = product_dict['product_id']
+        name = product_dict['name']
+        if self.exist("product", id):
+            self.update_item("product", name, id)
+        else:
+            product_dict.pop('product_id') 
+            self.create_item("product", product_dict)
