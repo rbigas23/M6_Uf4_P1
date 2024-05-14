@@ -5,7 +5,7 @@ import mysql.connector
 
 class botiga_db:
 
-    def __init__(self):
+    def __init__(self): # El metodo inicializa una conexion a la base de datos utilizando los parametros de configuracion proporcionados en un archivo JSON
         try:
             config = json.load(open("config.json"))
             self.conn = mysql.connector.connect(
@@ -18,11 +18,11 @@ class botiga_db:
         except Exception as e:
             return {"status": -1, "message": f"Error de conexion:{e}"}
 
-    def __del__(self):  # Tanca la connexió quan s'esborra la instància
+    def __del__(self):  # El metodo cierra la conexion cuando borra la instacia
         if self.conn:
             self.conn.close()
 
-    def read_producte(self, id):
+    def read_producte(self, id): # El metodo consulta la base de datos para obtener la informacion de un producto especiofico identificado por su ID
         try:
             cur = self.conn.cursor()
             cur.execute(f"SELECT * FROM product WHERE product_id = {id};")
@@ -33,7 +33,7 @@ class botiga_db:
         except Exception as e:
             return {"status": -1, "message": f"Error llegint el producte: {e}"}
 
-    def read_productes(self):
+    def read_productes(self): # El metodo consulta la base de datos para obtener la informacion de todos los productos
         try:
             cur = self.conn.cursor()
             cur.execute(f"SELECT * FROM product;")
@@ -44,7 +44,7 @@ class botiga_db:
         except Exception as e:
             return {"status": -1, "message": f"Error llegint el producte: {e}"}
 
-    def create_producte(self, producte):
+    def create_producte(self, producte): # El metodo inserta un nuevo producto en la base de datos utilizando los datos proporcionados
         try:
             cur = self.conn.cursor()
             cur.execute(
@@ -56,14 +56,14 @@ class botiga_db:
         except Exception as e:
             return {"status": -1, "message": f"Error llegint el producte: {e}"}
 
-    def create_productes(self, productes):
+    def create_productes(self, productes): # El metodo permite crear varios productos a la vez en la base de datos, por cada producto se llama al metodo "create_producte"
         results = []
         for producte in productes:
             result = self.create_producte(producte)
             results.append(result)
         return results
 
-    def delete_producte(self, product_id: int):
+    def delete_producte(self, product_id: int): # El metodo actualiza el nombre de un producto en la base de datos segun el ID proporcionado
         try:
             cur = self.conn.cursor()
             cur.execute(f"DELETE FROM product WHERE product_id = {product_id}")
@@ -73,7 +73,7 @@ class botiga_db:
             print(f"Error eliminando el producto: {e}")
             return False
 
-    def update_producte(self, id: int, name: str):
+    def update_producte(self, product_id: int, name: str): # El metodo hace una consulta que selecciona detalles específicos de los productos, incluyendo el nombre de la categoria, el nombre de la subcategoria, el nombre del producto, la marca del producto y el precio, utilizamos los INNER JOIN para combinar las tablas product, subcategory y category segun las primary key y foreing key que estan la base de datos
         try:
             cur = self.conn.cursor()
             cur.execute(
@@ -82,7 +82,7 @@ class botiga_db:
                 SET name = %s
                 WHERE product_id = %s
                 """,
-                (name, id),
+                (name, product_id),
             )
             self.conn.commit()
             return True

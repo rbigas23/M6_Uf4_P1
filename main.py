@@ -19,14 +19,17 @@ class producte(BaseModel):
     created_at: datetime.datetime = None
     updated_at: datetime.datetime = None
 
+# En este endpoint se llama a todos los productos con "/product"
 @app.get("/product/")
 def read_products():
     return db_handler.read_productes()
 
+# En este endpoint se llama a un producto segun el ID "/product/{id}"
 @app.get("/product/{id}")
 def read_product(id:int):
     return db_handler.read_producte(id)
 
+# En este endpoint se crea un producto "/create"
 @app.post("/create/")
 def create_producte(producte: producte):
     try:
@@ -35,6 +38,7 @@ def create_producte(producte: producte):
     except Exception as e:
         return {"status": -1, "message": f"Error afegint el producte: {e}"}
     
+# En este endpoint se pueden crear mas de un producto "/creates"    
 @app.post("/creates/")
 def create_productes(productes: List[producte]):
     results = []
@@ -46,11 +50,14 @@ def create_productes(productes: List[producte]):
             results.append({"status": -1, "message": f"Error afegint el producte: {e}"})
     return results
 
+# En este endpoint se elimina un producto segun el ID "/product/{id}"
 @app.delete("/product/{id}")
 def delete_producte(id: int):
     success = db_handler.delete_producte(id)
     return {"status": "Producte eliminat correctament"} if success else {"status": "Producte no trobat"}
 
+
+# En este endpoint se modifica el nombre de un producto segun el ID "/producto/{id}"
 @app.put("/product/{id}")
 def update_producte(id: int, name: str):
     try:
@@ -61,6 +68,7 @@ def update_producte(id: int, name: str):
     except Exception as e:
         return {"status": -1, "message": f"Error modificant el producte: {e}"}
     
+# En este endpoint se llaman a todos los productos con unos detalles especificos: nombre de la categoria, nombre de la subcategoria, nombre del producto, marca del producto y el precio "/productAll"
 @app.get("/productAll")
 def read_productes_with_details():
     try:
