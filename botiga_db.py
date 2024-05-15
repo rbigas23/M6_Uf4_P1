@@ -117,13 +117,13 @@ class botiga_db:
             for product in products:  # Per cada producte es processen els diferents grups de dades i s'insereixen/actualitzen els registres corresponents
 
                 category_dict = {'category_id':product['id_categoria'], 'name':product['nom_categoria']}
-                self.process_category(category_dict)
+                self.process_item(category_dict, "category")
 
                 subcategory_dict = {'subcategory_id':product['id_subcategoria'], 'name':product['nom_subcategoria'], 'category_id':product['id_categoria']}
-                self.process_subcategory(subcategory_dict)
+                self.process_item(subcategory_dict, "subcategory")
 
                 product_dict = {'product_id':product['id_producto'], 'name':product['nom_producto'], 'description':product['descripcion_producto'], 'company':product['companyia'], 'price':product['precio'], 'units':product['unidades'], 'subcategory_id':product['id_subcategoria']}
-                self.process_product(product_dict)
+                self.process_item(product_dict, "product")
 
     def exist(self, table, id):  # Comproba si existeix un registre amb una id determinada a la taula especificada
         cur = self.conn.cursor()
@@ -143,32 +143,13 @@ class botiga_db:
         cur.execute(f"UPDATE {table} SET name = '{name}', updated_at = '{datetime.datetime.now()}' WHERE {table}_id = {id};")
         self.conn.commit()
 
-    """Els tres métodes següents s'encarrguen de processar les dades d'una categoria, una subcategoria o un producte
-    (actualitza o insereix les dades segons si l'element ja existeix o no)"""
+    """El mètode següent s'encarrega de processar les dades d'una categoria, una subcategoria o un producte
+       (actualitza o insereix les dades segons si l'element ja existeix o no)"""
 
-    def process_category(self, category_dict):  
-        id = category_dict['category_id']
-        name = category_dict['name']
-        if self.exist("category", id):
-            self.update_item("category", name, id)
+    def process_item(self, item_dict, item_name):  
+        id = item_dict[f'{item_name}_id']
+        if self.exist(item_name, id):
+            self.update_item(item_name, item_dict['name'], id)
         else:
-            category_dict.pop('category_id') 
-            self.create_item("category", category_dict)
-
-    def process_subcategory(self, subcategory_dict):
-        id = subcategory_dict['subcategory_id']
-        name = subcategory_dict['name']
-        if self.exist("subcategory", id):
-            self.update_item("subcategory", name, id)
-        else:
-            subcategory_dict.pop('subcategory_id') 
-            self.create_item("subcategory", subcategory_dict)
-    
-    def process_product(self, product_dict):
-        id = product_dict['product_id']
-        name = product_dict['name']
-        if self.exist("product", id):
-            self.update_item("product", name, id)
-        else:
-            product_dict.pop('product_id') 
-            self.create_item("product", product_dict)
+            item_dict.pop(f'{item_name}_id')  # Eliminem la id ja que no la necessitem per fer la inserció a la base de dades
+            self.create_item(item_name, item_dict)

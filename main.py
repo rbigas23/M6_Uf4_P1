@@ -78,7 +78,7 @@ def read_productes_with_details():
         return {"status": -1, "message": f"Error obteniendo los productos: {e}"}
 
 # Aquest endpoint permet inserir tots els productes d'un fitxer csv a la base de dades
-@app.get("/loadProducts/{filename}")
+@app.post("/loadProducts/{filename}")
 def load_products(filename:str):
     try:
         db_handler.load_products(filename)
